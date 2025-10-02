@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Recargo por Jornada Nocturna</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box;font-family:Inter, system-ui, Arial, Helvetica, sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#071129 0%, #071b2a 100%);color:#e6eef6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:900px;background:var(--card);border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.6);}
+    header{display:flex;gap:16px;align-items:center}
+    header h1{font-size:1.15rem;margin:0}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:18px;margin-top:16px}
+    .panel{background:var(--glass);padding:14px;border-radius:10px}
+    label{display:block;font-size:0.9rem;margin-bottom:6px;color:var(--muted)}
+    input,select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+    .row{display:flex;gap:8px}
+    .row > *{flex:1}
+    button{background:var(--accent);border:none;padding:10px 12px;border-radius:10px;color:#042027;font-weight:600;cursor:pointer}
+    .result{background:linear-gradient(90deg, rgba(6,182,212,0.08), rgba(96,165,250,0.02));padding:12px;border-radius:8px;margin-top:10px}
+    .warn{background:#3b2a18;color:#fff;padding:8px;border-radius:6px;font-size:0.9rem}
+    .muted-note{font-size:0.85rem;color:var(--muted);margin-top:8px}
+    footer{margin-top:14px;font-size:0.85rem;color:var(--muted)}
+    pre{white-space:pre-wrap;background:rgba(255,255,255,0.02);padding:10px;border-radius:8px}
+    @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <header>
+      <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#06b6d4,#60a5fa);display:flex;align-items:center;justify-content:center;font-weight:700;color:#042027">N</div>
+      <div>
+        <h1>Calculadora de la Jornada Nocturna — Recargo 25%</h1>
+        <div class="muted-note">Herramienta para calcular el valor de la hora nocturna y la remuneración por horas nocturnas según el Código de Trabajo de El Salvador (recargo 25%).</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <label for="mode">Modo de cálculo</label>
+        <select id="mode">
+          <option value="hourly">Por tarifa por hora (HD)</option>
+          <option value="monthly">Por salario mensual</option>
+        </select>
+
+        <div id="hourlyInputs" style="margin-top:12px">
+          <label>Remuneración por hora diurna (HD)</label>
+          <input id="hd" type="number" step="0.01" min="0" value="2.00" />
+        </div>
+
+        <div id="monthlyInputs" style="margin-top:12px;display:none">
+          <label>Salario básico mensual (SBM)</label>
+          <input id="sbm" type="number" step="0.01" min="0" value="600" />
+          <div style="height:8px"></div>
+          <label>Horas ordinarias por día (contrato)</label>
+          <input id="hoursPerDay" type="number" step="0.1" min="1" value="8" />
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Horas nocturnas trabajadas (en el periodo a calcular)</label>
+          <input id="nightHours" type="number" step="0.01" min="0" value="5" />
+          <div class="muted-note">La ley define jornada nocturna desde las 19:00 hasta las 06:00. Límite diario: 7 horas; límite semanal: 39 horas.</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Horas nocturnas en la semana (opcional — para advertencias)</label>
+          <input id="nightHoursWeek" type="number" step="0.1" min="0" placeholder="ej. 20" />
+        </div>
+
+        <div style="margin-top:12px" class="row">
+          <button id="calc">Calcular</button>
+          <button id="reset" style="background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit">Reset</button>
+        </div>
+
+        <div id="warnings" style="margin-top:10px"></div>
+
+        <div class="result" id="resultBox" style="display:none">
+          <div id="r1"></div>
+          <div id="r2" style="margin-top:8px"></div>
+          <pre id="formula" style="margin-top:8px"></pre>
+        </div>
+
+      </section>
+
+      <aside class="panel">
+        <h3>Resumen legal</h3>
+        <p class="muted-note">Artículo 161 — Hora nocturna: 19:00 a 06:00. Hora nocturna tiene un recargo del 25% sobre la hora diurna. Jornada nocturna: máximo 7 horas diarias y 39 horas semanales.</p>
+
+        <h4>Fórmulas</h4>
+        <ul>
+          <li><strong>HN</strong> = HD × 1.25 (valor de la hora nocturna)</li>
+          <li>Si tienes salario mensual: SBD = SBM / 30 → HD ≈ SBD / HorasPorDía</li>
+          <li>Remuneración nocturna total = HN × HorasNocturnasTrabajadas</li>
+        </ul>
+
+        <h4>Ejemplo (por defecto)</h4>
+        <p class="muted-note">HD = $2.00 → HN = $2.00 × 1.25 = $2.50. Si trabajó 5 horas nocturnas → Total nocturno = $2.50 × 5 = $12.50</p>
+
+        <footer>
+          ¿Quieres integrar esto a un sitio (Django/Flask) o que genere un archivo descargable? Puedo adaptarlo.
+        </footer>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const mode = document.getElementById('mode');
+    const hourlyInputs = document.getElementById('hourlyInputs');
+    const monthlyInputs = document.getElementById('monthlyInputs');
+    const hdInput = document.getElementById('hd');
+    const sbmInput = document.getElementById('sbm');
+    const hoursPerDay = document.getElementById('hoursPerDay');
+    const nightHours = document.getElementById('nightHours');
+    const nightHoursWeek = document.getElementById('nightHoursWeek');
+    const calcBtn = document.getElementById('calc');
+    const resetBtn = document.getElementById('reset');
+    const resultBox = document.getElementById('resultBox');
+    const r1 = document.getElementById('r1');
+    const r2 = document.getElementById('r2');
+    const formula = document.getElementById('formula');
+    const warnings = document.getElementById('warnings');
+
+    function showMode(){
+      if(mode.value === 'hourly'){
+        hourlyInputs.style.display = '';
+        monthlyInputs.style.display = 'none';
+      } else {
+        hourlyInputs.style.display = 'none';
+        monthlyInputs.style.display = '';
+      }
+    }
+
+    mode.addEventListener('change', showMode);
+    showMode();
+
+    function currency(n){return '$' + Number(n).toFixed(2)}
+
+    calcBtn.addEventListener('click', ()=>{
+      warnings.innerHTML = '';
+      resultBox.style.display = 'none';
+
+      const nh = parseFloat(nightHours.value) || 0;
+      const nhWeek = parseFloat(nightHoursWeek.value);
+
+      let hd = 0;
+      if(mode.value === 'hourly'){
+        hd = parseFloat(hdInput.value) || 0;
+      } else {
+        const sbm = parseFloat(sbmInput.value) || 0;
+        const hpday = parseFloat(hoursPerDay.value) || 8;
+        const sbd = sbm / 30; // salario diario
+        hd = sbd / hpday; // aproximación de hora ordinaria
+      }
+
+      const hn = hd * 1.25; // recargo 25%
+      const totalNight = hn * nh;
+
+      // Validaciones legales (advertencias)
+      const warns = [];
+      if(nh > 7) warns.push('La jornada nocturna diaria no puede exceder de 7 horas según Código de Trabajo. Valor ingresado: ' + nh + ' h.');
+      if(!isNaN(nhWeek) && nhWeek > 39) warns.push('Atención: las horas nocturnas en la semana ingresadas ('+ nhWeek + ' h) exceden 39 horas semanales, límite legal.');
+      if(hd <= 0) warns.push('La remuneración por hora diurna calculada es cero o negativa — verifica los datos de entrada.');
+
+      if(warns.length) {
+        warnings.innerHTML = warns.map(w=>'<div class="warn">' + w + '</div>').join('');
+      }
+
+      r1.innerHTML = '<strong>Valor hora diurna (HD):</strong> ' + currency(hd);
+      r2.innerHTML = '<strong>Valor hora nocturna (HN = HD × 1.25):</strong> ' + currency(hn) + '<br><strong>Remuneración por '+ nh + ' h nocturnas:</strong> ' + currency(totalNight);
+      formula.textContent = 'HN = HD × 1.25\nHN = ' + hd.toFixed(2) + ' × 1.25 = ' + hn.toFixed(2) + '\nTotal nocturno = HN × HorasNocturnas = ' + hn.toFixed(2) + ' × ' + nh + ' = ' + totalNight.toFixed(2);
+
+      resultBox.style.display = '';
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      hdInput.value = '2.00'; sbmInput.value = '600'; hoursPerDay.value = '8'; nightHours.value = '5'; nightHoursWeek.value = '';
+      warnings.innerHTML = ''; resultBox.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
