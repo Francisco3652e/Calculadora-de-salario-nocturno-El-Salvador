@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Recargo por Jornada Nocturna</title>
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.03)}
+    :root{--bg:#f8fafc;--card:#ffffff;--accent:#06b6d4;--muted:#475569;--glass:rgba(2,6,23,0.03)}
     *{box-sizing:border-box;font-family:Inter, system-ui, Arial, Helvetica, sans-serif}
-    body{margin:0;background:linear-gradient(180deg,#071129 0%, #071b2a 100%);color:#e6eef6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    body{margin:0;background:linear-gradient(180deg,#f8fafc 0%, #eef8fb 100%);color:#0b3140;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
     .card{width:100%;max-width:900px;background:var(--card);border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.6);}
     header{display:flex;gap:16px;align-items:center}
     header h1{font-size:1.15rem;margin:0}
@@ -18,7 +18,7 @@
     .row{display:flex;gap:8px}
     .row > *{flex:1}
     button{background:var(--accent);border:none;padding:10px 12px;border-radius:10px;color:#042027;font-weight:600;cursor:pointer}
-    .result{background:linear-gradient(90deg, rgba(6,182,212,0.08), rgba(96,165,250,0.02));padding:12px;border-radius:8px;margin-top:10px}
+  .result{background:linear-gradient(90deg, rgba(103,232,249,0.08), rgba(125,211,252,0.03));padding:12px;border-radius:8px;margin-top:10px}
     .warn{background:#3b2a18;color:#fff;padding:8px;border-radius:6px;font-size:0.9rem}
     .muted-note{font-size:0.85rem;color:var(--muted);margin-top:8px}
     footer{margin-top:14px;font-size:0.85rem;color:var(--muted)}
@@ -30,10 +30,10 @@
 <body>
   <div class="card">
     <header>
-      <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#06b6d4,#60a5fa);display:flex;align-items:center;justify-content:center;font-weight:700;color:#042027">N</div>
+  <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#22d3ee,#7dd3fc);display:flex;align-items:center;justify-content:center;font-weight:700;color:#042027">N</div>
       <div>
         <h1>Calculadora de la Jornada Nocturna — Recargo 25%</h1>
-        <div class="muted-note">Herramienta para calcular el valor de la hora nocturna y la remuneración por horas nocturnas según el Código de Trabajo de El Salvador (recargo 25%).</div>
+        <div class="muted-note">Herramienta para calcular el valor de la hora nocturna, las horas extras nocturnas y la remuneración total según el Código de Trabajo de El Salvador (recargo 25%).</div>
       </div>
     </header>
 
@@ -47,7 +47,10 @@
 
         <div id="hourlyInputs" style="margin-top:12px">
           <label>¿Cuánto ganas por hora?</label>
-          <input id="hd" type="number" step="0.01" min="0" value="2.00" />
+          <input id="hd" type="number" step="0.01" min="0" value="2.50" />
+          <div style="height:8px"></div>
+          <label>¿Cual es la jornada laboral por día?</label>
+          <input id="hoursPerDayHourly" type="number" step="0.1" min="1" value="8" />
         </div>
 
         <div id="monthlyInputs" style="margin-top:12px;display:none">
@@ -61,21 +64,21 @@
         <div style="margin-top:12px">
           <label for="hoursMode">¿Cómo quieres ingresar las horas?</label>
           <select id="hoursMode">
-            <option value="period">Por periodo (total de horas nocturnas a calcular)</option>
-            <option value="week">Por semana (calcula remuneración semanal de horas nocturnas)</option>
+            <option value="period">Por día (horas trabajadas en la jornada)</option>
+            <option value="week">Por semana (total de horas nocturnas trabajadas)</option>
           </select>
         </div>
 
         <div id="periodHours" style="margin-top:12px">
-          <label>Horas nocturnas trabajadas (en el periodo a calcular)</label>
-          <input id="nightHours" type="number" step="0.01" min="0" value="5" />
-          <div class="muted-note">La ley define jornada nocturna desde las 19:00 hasta las 06:00. Límite diario: 7 horas; límite semanal: 39 horas.</div>
+          <label>Horas nocturnas trabajadas</label>
+          <input id="nightHours" type="number" step="0.01" min="0" value="7" />
+          <div class="muted-note">La jornada nocturna diaria no debe exceder 7 horas. Las horas adicionales se pagan al doble.</div>
         </div>
 
         <div id="weekHours" style="margin-top:12px;display:none">
-          <label>Horas nocturnas en la semana</label>
-          <input id="nightHoursWeek" type="number" step="0.1" min="0" placeholder="ej. 20" />
-          <div class="muted-note">Si seleccionas "Por semana", el resultado mostrará la remuneración para una semana.</div>
+          <label>Total de horas nocturnas en la semana</label>
+          <input id="nightHoursWeek" type="number" step="0.1" min="0" placeholder="ej. 39" />
+          <div class="muted-note">La jornada nocturna semanal no debe exceder 39 horas. Las horas adicionales se pagan al doble.</div>
         </div>
 
         <div style="margin-top:12px" class="row">
@@ -95,19 +98,16 @@
 
       <aside class="panel">
         <h3>Resumen legal</h3>
-        <p class="muted-note">Artículo 161 — Hora nocturna: 19:00 a 06:00. Hora nocturna tiene un recargo del 25% sobre la hora diurna. Jornada nocturna: máximo 7 horas diarias y 39 horas semanales.</p>
-
+        <p class="muted-note">Artículo 161 — Hora nocturna: 19:00 a 06:00. La jornada nocturna máxima es de 7 horas diarias o 39 horas semanales. Las horas excedentes se consideran extraordinarias y se pagan con un recargo del 100% sobre la hora nocturna.</p>
         <h4>Fórmulas</h4>
         <ul>
           <li><strong>HN</strong> = HD × 1.25 (valor de la hora nocturna)</li>
-          <li>Si tienes salario mensual: SBD = SBM / 30 → HD ≈ SBD / HorasPorDía</li>
-          <li>Remuneración nocturna total = HN × HorasNocturnasTrabajadas</li>
+          <li><strong>HEN</strong> = HN × 2 (hora extra nocturna, pagada al doble)</li>
+          <li>Si tienes salario mensual: SBD = SBM / 30 → HD = SBD / 7 (horas por día)</li>
         </ul>
 
-        <h4>Ejemplo (por defecto)</h4>
-        <p class="muted-note">HD = $2.00 → HN = $2.00 × 1.25 = $2.50. Si trabajó 5 horas nocturnas → Total nocturno = $2.50 × 5 = $12.50</p>
-
         <footer>
+          Creadores: <br>
           Francisco Javier Lemus Cruz<br>
           Rony Josue Sorto Villalta
         </footer>
@@ -122,11 +122,12 @@
     const hdInput = document.getElementById('hd');
     const sbmInput = document.getElementById('sbm');
     const hoursPerDay = document.getElementById('hoursPerDay');
-  const nightHours = document.getElementById('nightHours');
-  const nightHoursWeek = document.getElementById('nightHoursWeek');
-  const hoursMode = document.getElementById('hoursMode');
-  const periodHours = document.getElementById('periodHours');
-  const weekHours = document.getElementById('weekHours');
+    const hoursPerDayHourly = document.getElementById('hoursPerDayHourly');
+    const nightHours = document.getElementById('nightHours');
+    const nightHoursWeek = document.getElementById('nightHoursWeek');
+    const hoursMode = document.getElementById('hoursMode');
+    const periodHours = document.getElementById('periodHours');
+    const weekHours = document.getElementById('weekHours');
     const calcBtn = document.getElementById('calc');
     const resetBtn = document.getElementById('reset');
     const resultBox = document.getElementById('resultBox');
@@ -148,7 +149,6 @@
     mode.addEventListener('change', showMode);
     showMode();
 
-    // Mostrar/ocultar inputs según cómo se ingresan las horas (periodo o semana)
     function showHoursMode(){
       if(hoursMode.value === 'period'){
         periodHours.style.display = '';
@@ -168,62 +168,66 @@
       warnings.innerHTML = '';
       resultBox.style.display = 'none';
 
-  // Dependiendo del modo de ingreso de horas, usamos la entrada adecuada
-  const nh = parseFloat(nightHours.value) || 0; // por periodo
-  const nhWeek = parseFloat(nightHoursWeek.value);
-  const selectedHoursMode = hoursMode.value; // 'period' | 'week'
+      const nh = parseFloat(nightHours.value) || 0;
+      const nhWeek = parseFloat(nightHoursWeek.value);
+      const selectedHoursMode = hoursMode.value;
 
       let hd = 0;
+      let sbn = 0;
+      let sbm = parseFloat(sbmInput.value) || 0;
+
       if(mode.value === 'hourly'){
         hd = parseFloat(hdInput.value) || 0;
+        const hpdayH = parseFloat(hoursPerDayHourly.value) || 7;
+        sbn = (hd * hpdayH * 30) * 1.25; // salario mensual estimado con recargo 25%
       } else {
-        const sbm = parseFloat(sbmInput.value) || 0;
-        const hpday = parseFloat(hoursPerDay.value) || 8;
-        const sbd = sbm / 30; // salario diario
-        hd = sbd / hpday; // aproximación de hora ordinaria
+        const hpday = parseFloat(hoursPerDay.value) || 7;
+        const sbd = sbm / 30;
+        hd = sbd / hpday;
+        sbn = sbm * 1.25;
       }
 
-      const hn = hd * 1.25; // recargo 25%
-      let totalNight = 0;
+      const hn = hd * 1.25;
+
+      let regularHours = 0;
+      let extraHours = 0;
       if(selectedHoursMode === 'period'){
-        totalNight = hn * nh; // total para el periodo ingresado
+        regularHours = Math.min(nh, 7);
+        extraHours = Math.max(0, nh - 7);
       } else {
-        // Por semana: calculamos la remuneración para la semana indicada
-        // si no hay valor en nhWeek, asumimos nhWeek = 0
         const weekH = isNaN(nhWeek) ? 0 : nhWeek;
-        totalNight = hn * weekH;
+        regularHours = Math.min(weekH, 39);
+        extraHours = Math.max(0, weekH - 39);
       }
 
-      // Validaciones legales (advertencias)
+      const overtimePay = (hn * 2) * extraHours;
+      const regularPay = hn * regularHours;
+      const totalNight = regularPay + overtimePay;
+
+      let salarioFinal = 0;
+      if(selectedHoursMode === 'week'){
+        salarioFinal = sbn + overtimePay;
+      } else {
+        salarioFinal = sbn + overtimePay;
+      }
+
       const warns = [];
-      // Validaciones: si el usuario está ingresando por periodo, validamos límite diario (7h).
-      // Si está ingresando por semana, validamos límite semanal (39h).
-      if(selectedHoursMode === 'period'){
-        if(nh > 7) warns.push('La jornada nocturna diaria no puede exceder de 7 horas según Código de Trabajo. Valor ingresado: ' + nh + ' h.');
-      } else {
-        if(!isNaN(nhWeek) && nhWeek > 39) warns.push('Atención: las horas nocturnas en la semana ingresadas ('+ nhWeek + ' h) exceden 39 horas semanales, límite legal.');
-      }
-      if(hd <= 0) warns.push('La remuneración por hora diurna calculada es cero o negativa — verifica los datos de entrada.');
+      if(selectedHoursMode === 'period' && nh > 7) warns.push('Excediste las 7 horas diarias permitidas, las adicionales se consideran horas extras.');
+      if(selectedHoursMode === 'week' && nhWeek > 39) warns.push('Excediste las 39 horas semanales permitidas, las adicionales se consideran horas extras.');
+      if(hd <= 0) warns.push('La remuneración por hora diurna no puede ser cero.');
 
-      if(warns.length) {
-        warnings.innerHTML = warns.map(w=>'<div class="warn">' + w + '</div>').join('');
-      }
+      if(warns.length) warnings.innerHTML = warns.map(w=>'<div class="warn">'+w+'</div>').join('');
 
-      r1.innerHTML = '<strong>Valor hora diurna (HD):</strong> ' + currency(hd);
-      if(selectedHoursMode === 'period'){
-        r2.innerHTML = '<strong>Valor hora nocturna (HN = HD × 1.25):</strong> ' + currency(hn) + '<br><strong>Remuneración por '+ nh + ' h nocturnas:</strong> ' + currency(totalNight);
-        formula.textContent = 'HN = HD × 1.25\nHN = ' + hd.toFixed(2) + ' × 1.25 = ' + hn.toFixed(2) + '\nTotal nocturno = HN × HorasNocturnas = ' + hn.toFixed(2) + ' × ' + nh + ' = ' + totalNight.toFixed(2);
-      } else {
-        const weekH = isNaN(nhWeek) ? 0 : nhWeek;
-        r2.innerHTML = '<strong>Valor hora nocturna (HN = HD × 1.25):</strong> ' + currency(hn) + '<br><strong>Remuneración semanal por '+ weekH + ' h nocturnas:</strong> ' + currency(totalNight);
-        formula.textContent = 'HN = HD × 1.25\nHN = ' + hd.toFixed(2) + ' × 1.25 = ' + hn.toFixed(2) + '\nTotal semanal nocturno = HN × HorasNocturnasSemana = ' + hn.toFixed(2) + ' × ' + weekH + ' = ' + totalNight.toFixed(2);
-      }
+      r1.innerHTML = '<strong>Valor hora diurna (HD):</strong> '+currency(hd)+'<br><strong>Valor hora nocturna (HN):</strong> '+currency(hn);
 
+      let tipo = selectedHoursMode === 'week' ? 'semanal' : 'diario';
+
+      r2.innerHTML = '<strong>Horas regulares:</strong> '+regularHours+' h<br><strong>Valor de horas regulares:</strong> '+currency(regularPay)+'<br><strong>Horas extras (doble):</strong> '+extraHours+' h<br><strong>Pago por extras:</strong> '+currency(overtimePay)+'<br><strong>Total a pagar '+tipo+':</strong> '+currency(totalNight)+'<br><br><strong>Salario básico mensual ajustado (con recargo 25%):</strong> '+currency(sbn)+'<br><strong>Salario básico mensual ajustado (con recargo 25% + horas extras '+tipo+'):</strong> '+currency(salarioFinal);
       resultBox.style.display = '';
     });
 
     resetBtn.addEventListener('click', ()=>{
-      hdInput.value = '2.00'; sbmInput.value = '600'; hoursPerDay.value = '8'; nightHours.value = '5'; nightHoursWeek.value = '';
+      hdInput.value = '2.50'; sbmInput.value = '600'; hoursPerDay.value = '7'; hoursPerDayHourly.value = '7'; nightHours.value = '5'; nightHoursWeek.value = '';
       warnings.innerHTML = ''; resultBox.style.display = 'none';
     });
   </script>
