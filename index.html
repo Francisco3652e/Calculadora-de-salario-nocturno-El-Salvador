@@ -11,8 +11,13 @@
     .card{width:100%;max-width:900px;background:var(--card);border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.6);}
     header{display:flex;gap:16px;align-items:center}
     header h1{font-size:1.15rem;margin:0}
-    .grid{display:grid;grid-template-columns:1fr 320px;gap:18px;margin-top:16px}
+  .grid{display:grid;grid-template-columns:1fr 320px;gap:18px;margin-top:16px;align-items:start}
     .panel{background:var(--glass);padding:14px;border-radius:10px}
+    /* aside panel sticky + slide on scroll */
+    aside.panel{position:sticky;top:22px;transition:transform 260ms cubic-bezier(.2,.9,.2,1);will-change:transform;overflow:auto;max-height:calc(100vh - 120px)}
+    @media(max-width:880px){
+      aside.panel{position:static;transform:none;max-height:none;overflow:visible}
+    }
     label{display:block;font-size:0.9rem;margin-bottom:6px;color:var(--muted)}
     input,select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;}
     .row{display:flex;gap:8px}
@@ -135,6 +140,7 @@
     const r2 = document.getElementById('r2');
     const formula = document.getElementById('formula');
     const warnings = document.getElementById('warnings');
+  const asidePanel = document.querySelector('aside.panel');
 
     function showMode(){
       if(mode.value === 'hourly'){
@@ -162,7 +168,17 @@
     hoursMode.addEventListener('change', showHoursMode);
     showHoursMode();
 
-    function currency(n){return '$' + Number(n).toFixed(2)}
+    // Truncate a number to `decimals` places without rounding
+    function truncateTo(n, decimals){
+      const num = Number(n) || 0;
+      const factor = Math.pow(10, decimals);
+      return Math.trunc(num * factor) / factor;
+    }
+
+    // Format currency using truncation (no rounding) to avoid approximations like 3.125 -> 3.13
+    function currency(n){
+      return '$' + truncateTo(n, 2).toFixed(2);
+    }
 
     calcBtn.addEventListener('click', ()=>{
       warnings.innerHTML = '';
@@ -176,10 +192,12 @@
       let sbn = 0;
       let sbm = parseFloat(sbmInput.value) || 0;
 
+      let estimatedMonthlyNoRecargo = 0;
       if(mode.value === 'hourly'){
         hd = parseFloat(hdInput.value) || 0;
         const hpdayH = parseFloat(hoursPerDayHourly.value) || 7;
-        sbn = (hd * hpdayH * 30) * 1.25; // salario mensual estimado con recargo 25%
+        estimatedMonthlyNoRecargo = hd * hpdayH * 30; // estimación mensual sin recargo
+        sbn = estimatedMonthlyNoRecargo * 1.25; // salario mensual estimado con recargo 25%
       } else {
         const hpday = parseFloat(hoursPerDay.value) || 7;
         const sbd = sbm / 30;
@@ -189,6 +207,7 @@
 
       const hn = hd * 1.25;
 
+      // Determinar horas regulares y extras
       let regularHours = 0;
       let extraHours = 0;
       if(selectedHoursMode === 'period'){
@@ -200,21 +219,28 @@
         extraHours = Math.max(0, weekH - 39);
       }
 
-      const overtimePay = (hn * 2) * extraHours;
-      const regularPay = hn * regularHours;
-      const totalNight = regularPay + overtimePay;
+      // Aplicar truncamiento a HN y a la hora extra (HEN) antes de calcular pagos
+      const hnTrunc = truncateTo(hn, 2);
+      const henTrunc = truncateTo(hn * 2, 2);
 
+      // Calcular pagos usando las tarifas truncadas y truncar los montos intermedios a 2 decimales
+      const regularPayRaw = hnTrunc * regularHours;
+      const regularPay = truncateTo(regularPayRaw, 2);
+
+      const overtimePayRaw = henTrunc * extraHours;
+      const overtimePay = truncateTo(overtimePayRaw, 2);
+
+      const totalNight = truncateTo(regularPay + overtimePay, 2);
+
+      // El salario final (cuando aplica) incorpora las horas extras truncadas
       let salarioFinal = 0;
-      if(selectedHoursMode === 'week'){
-        salarioFinal = sbn + overtimePay;
-      } else {
-        salarioFinal = sbn + overtimePay;
-      }
+      salarioFinal = truncateTo(sbn + overtimePay, 2);
 
       const warns = [];
       if(selectedHoursMode === 'period' && nh > 7) warns.push('Excediste las 7 horas diarias permitidas, las adicionales se consideran horas extras.');
       if(selectedHoursMode === 'week' && nhWeek > 39) warns.push('Excediste las 39 horas semanales permitidas, las adicionales se consideran horas extras.');
-      if(hd <= 0) warns.push('La remuneración por hora diurna no puede ser cero.');
+  if(hd <= 0) warns.push('La remuneración por hora diurna no puede ser cero.');
+  if(hn <= 0) warns.push('El valor de la hora nocturna (HN) no puede ser $0.00 — verifica HD o los datos de salario.');
 
       if(warns.length) warnings.innerHTML = warns.map(w=>'<div class="warn">'+w+'</div>').join('');
 
@@ -222,9 +248,114 @@
 
       let tipo = selectedHoursMode === 'week' ? 'semanal' : 'diario';
 
-      r2.innerHTML = '<strong>Horas regulares:</strong> '+regularHours+' h<br><strong>Valor de horas regulares:</strong> '+currency(regularPay)+'<br><strong>Horas extras (doble):</strong> '+extraHours+' h<br><strong>Pago por extras:</strong> '+currency(overtimePay)+'<br><strong>Total a pagar '+tipo+':</strong> '+currency(totalNight)+'<br><br><strong>Salario básico mensual ajustado (con recargo 25%):</strong> '+currency(sbn)+'<br><strong>Salario básico mensual ajustado (con recargo 25% + horas extras '+tipo+'):</strong> '+currency(salarioFinal);
+      r2.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.95rem">'
+        // If mode is hourly, show estimated salary without the 25% surcharge
+        + (mode.value === 'hourly' ? ('<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)">Salario estimado (sin recargo)</td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + currency(estimatedMonthlyNoRecargo) + '</td></tr>') : '')
+        + '<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)"><strong>Horas regulares</strong></td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + regularHours + ' h</td></tr>'
+        + '<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)">Valor de horas regulares</td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + currency(regularPay) + '</td></tr>'
+        + '<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)"><strong>Horas extras (doble)</strong></td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + extraHours + ' h</td></tr>'
+        + '<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)">Pago por extras</td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + currency(overtimePay) + '</td></tr>'
+        + '<tr><td style="padding:8px;border-top:6px solid transparent"><strong>Total a pagar ' + tipo + '</strong></td><td style="padding:8px;border-top:6px solid transparent;text-align:right"><strong>' + currency(totalNight) + '</strong></td></tr>'
+        + '<tr><td style="padding:8px;border-top:12px solid transparent">Salario básico mensual ajustado (recargo 25%)</td><td style="padding:8px;border-top:12px solid transparent;text-align:right">' + currency(sbn) + '</td></tr>'
+        + '<tr><td style="padding:8px;border-top:6px solid transparent">Salario básico mensual ajustado (con horas extras ' + tipo + ')</td><td style="padding:8px;border-top:6px solid transparent;text-align:right">' + currency(salarioFinal) + '</td></tr>'
+        + '</table>';
       resultBox.style.display = '';
     });
+
+    // Bounded slide: the aside panel will follow scroll but never leaves the container
+    (function(){
+      if(!asidePanel) return;
+      let lastY = window.scrollY || window.pageYOffset;
+      let ticking = false;
+      let currentTranslate = 0;
+      let minTranslate = 0; // highest (up) position
+      let maxTranslate = 0; // lowest (down) position
+
+      function recalcLimits(){
+        // calculate how much the aside can move down without overflowing the card
+        const card = document.querySelector('.card');
+        if(!card) return;
+        const section = document.querySelector('section.panel');
+        const sectionRect = section ? section.getBoundingClientRect() : null;
+        const headerNote = document.querySelector('header .muted-note');
+        const headerNoteRect = headerNote ? headerNote.getBoundingClientRect() : null;
+
+        // Temporarily clear transform to measure the aside's natural position
+        const prevTransform = asidePanel.style.transform;
+        asidePanel.style.transform = 'none';
+        const asideRectNoTrans = asidePanel.getBoundingClientRect();
+        // restore previous transform
+        asidePanel.style.transform = prevTransform || '';
+
+        // Align aside to sit below the header note (we keep a small gap)
+        if(headerNoteRect){
+          const gap = 8;
+          // Compute a top offset so sticky keeps it below header note
+          const newTop = Math.max(8, headerNoteRect.bottom + gap - document.documentElement.clientTop);
+          asidePanel.style.top = newTop + 'px';
+        } else {
+          asidePanel.style.top = '22px';
+        }
+
+        // Compute maxTranslate so aside bottom never exceeds section bottom (card/section)
+        const sectionH = sectionRect ? sectionRect.height : 0;
+        const asideH = asideRectNoTrans.height;
+        minTranslate = 0;
+        maxTranslate = Math.max(0, sectionH - asideH - 12);
+
+        // reset current translate to 0 if it's out of bounds
+        currentTranslate = Math.max(minTranslate, Math.min(maxTranslate, currentTranslate));
+        asidePanel.style.transform = `translateY(${currentTranslate}px)`;
+      }
+
+      function onScroll(){
+        const y = window.scrollY || window.pageYOffset;
+        const delta = y - lastY;
+        lastY = y;
+
+        if(window.innerWidth <= 880) return;
+        if(resultBox.style.display === 'none') return;
+
+        // tentative translate
+        currentTranslate = Math.max(minTranslate, Math.min(maxTranslate, currentTranslate + delta));
+
+        // dynamic safety: ensure aside bottom (with current translate) does not pass card bottom
+        const card = document.querySelector('.card');
+        if(card){
+          // measure aside natural position
+          const prev = asidePanel.style.transform;
+          asidePanel.style.transform = 'none';
+          const asideNoTrans = asidePanel.getBoundingClientRect();
+          const cardRect = card.getBoundingClientRect();
+          asidePanel.style.transform = prev || '';
+
+          const asideBottomWithTranslate = asideNoTrans.bottom + currentTranslate;
+          const maxAllowedBottom = cardRect.bottom - 12; // small padding
+          if(asideBottomWithTranslate > maxAllowedBottom){
+            // reduce translate so bottom aligns with maxAllowedBottom
+            const overflow = asideBottomWithTranslate - maxAllowedBottom;
+            currentTranslate = Math.max(minTranslate, currentTranslate - overflow);
+          }
+        }
+
+        asidePanel.style.transform = `translateY(${currentTranslate}px)`;
+      }
+
+      window.addEventListener('scroll', ()=>{
+        if(!ticking){
+          window.requestAnimationFrame(()=>{ onScroll(); ticking = false; });
+          ticking = true;
+        }
+      }, {passive:true});
+
+      window.addEventListener('resize', ()=>{ recalcLimits(); }, {passive:true});
+      // recalc after a result is shown
+      const origShow = calcBtn.onclick;
+      recalcLimits();
+      // also recalc when results are made visible inside calc handler by observing resultBox
+      const obs = new MutationObserver(()=> recalcLimits());
+      obs.observe(resultBox, {attributes:true, childList:true, subtree:true});
+    })();
 
     resetBtn.addEventListener('click', ()=>{
       hdInput.value = '2.50'; sbmInput.value = '600'; hoursPerDay.value = '7'; hoursPerDayHourly.value = '7'; nightHours.value = '5'; nightHoursWeek.value = '';
