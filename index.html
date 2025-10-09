@@ -232,9 +232,44 @@
 
       const totalNight = truncateTo(regularPay + overtimePay, 2);
 
-      // El salario final (cuando aplica) incorpora las horas extras truncadas
+      // El salario nocturno proporcional (igual lógica para monthly y hourly)
       let salarioFinal = 0;
-      salarioFinal = truncateTo(sbn + overtimePay, 2);
+      let salarioNocturnoAjustado = 0; // salario mensual nocturno proporcional con recargo
+      // base mensual sin recargo: para hourly usamos estimatedMonthlyNoRecargo, para monthly usamos sbm
+      const baseMonthlyNoRecargo = mode.value === 'hourly' ? estimatedMonthlyNoRecargo : sbm;
+      const hpdayContract = mode.value === 'hourly' ? (parseFloat(hoursPerDayHourly.value) || 8) : (parseFloat(hoursPerDay.value) || 8);
+
+      if(selectedHoursMode === 'period'){
+        // solo las primeras 7 horas son parte de la jornada nocturna; el resto son horas extras
+        const nhVal = Math.min(nh, 7); // horas nocturnas consideradas para recargo
+        const proportion = hpdayContract > 0 ? (nhVal / hpdayContract) : 0;
+        salarioNocturnoAjustado = truncateTo(baseMonthlyNoRecargo * proportion * 1.25, 2);
+      } else {
+        const weekH = isNaN(nhWeek) ? 0 : nhWeek;
+        const avgPerDay = weekH / 7; // promedio diario
+        const avgConsidered = Math.min(avgPerDay, 7);
+        const proportion = hpdayContract > 0 ? (avgConsidered / hpdayContract) : 0;
+        salarioNocturnoAjustado = truncateTo(baseMonthlyNoRecargo * proportion * 1.25, 2);
+      }
+
+      // salario final incorpora horas extras (si las hay)
+      salarioFinal = truncateTo(salarioNocturnoAjustado + overtimePay, 2);
+
+      // Preparar fórmula para mostrar paso a paso
+      let formulaText = '';
+      if(mode.value === 'monthly'){
+        const sbd = truncateTo(sbm / 30, 4);
+        const hdFromSbm = truncateTo(sbd / hpdayContract, 4);
+        formulaText = `SBD = SBM / 30 = ${currency(sbd)}\nHD = SBD / ${hpdayContract} = ${currency(hdFromSbm)}\n` +
+          `Horas nocturnas consideradas (tope 7h) = ${ (selectedHoursMode==='period') ? 'min(' + nh + ',7)' : 'min((' + (nhWeek||0) + '/7),7)'}\n` +
+          `Salario nocturno proporcional = SBM × (horas_nocturnas_consideradas/horas_por_día) × 1.25 = ${currency(salarioNocturnoAjustado)}`;
+      } else {
+        // hourly: mostrar cálculo proporcional desde la base estimada
+        const hpdayH = parseFloat(hoursPerDayHourly.value) || 8;
+        formulaText = `Base mensual (estimada) = HD × ${hpdayH} × 30 = ${currency(estimatedMonthlyNoRecargo)}\n` +
+          `Salario nocturno proporcional = (Base / ${hpdayH} × ${ (selectedHoursMode==='period') ? Math.min(nh,7) : Math.min((nhWeek||0)/7,7) } ) × 1.25 = ${currency(salarioNocturnoAjustado)}`;
+      }
+      formula.innerText = formulaText;
 
       const warns = [];
       if(selectedHoursMode === 'period' && nh > 7) warns.push('Excediste las 7 horas diarias permitidas, las adicionales se consideran horas extras.');
@@ -248,16 +283,17 @@
 
       let tipo = selectedHoursMode === 'week' ? 'semanal' : 'diario';
 
-      r2.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.95rem">'
-        // If mode is hourly, show estimated salary without the 25% surcharge
-        + (mode.value === 'hourly' ? ('<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)">Salario estimado (sin recargo)</td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + currency(estimatedMonthlyNoRecargo) + '</td></tr>') : '')
+  r2.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.95rem">'
+    // If mode is hourly, show estimated salary without the 25% surcharge
+    + (mode.value === 'hourly' ? ('<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)">Salario estimado (sin recargo)</td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + currency(estimatedMonthlyNoRecargo) + '</td></tr>') : '')
         + '<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)"><strong>Horas regulares</strong></td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + regularHours + ' h</td></tr>'
         + '<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)">Valor de horas regulares</td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + currency(regularPay) + '</td></tr>'
         + '<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)"><strong>Horas extras (doble)</strong></td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + extraHours + ' h</td></tr>'
         + '<tr><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)">Pago por extras</td><td style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.06);text-align:right">' + currency(overtimePay) + '</td></tr>'
         + '<tr><td style="padding:8px;border-top:6px solid transparent"><strong>Total a pagar ' + tipo + '</strong></td><td style="padding:8px;border-top:6px solid transparent;text-align:right"><strong>' + currency(totalNight) + '</strong></td></tr>'
-        + '<tr><td style="padding:8px;border-top:12px solid transparent">Salario básico mensual ajustado (recargo 25%)</td><td style="padding:8px;border-top:12px solid transparent;text-align:right">' + currency(sbn) + '</td></tr>'
-        + '<tr><td style="padding:8px;border-top:6px solid transparent">Salario básico mensual ajustado (con horas extras ' + tipo + ')</td><td style="padding:8px;border-top:6px solid transparent;text-align:right">' + currency(salarioFinal) + '</td></tr>'
+        // Mostrar salario nocturno proporcional cuando el modo es monthly
+  + ('<tr><td style="padding:8px;border-top:12px solid transparent">Salario mensual nocturno (proporcional, recargo 25%)</td><td style="padding:8px;border-top:12px solid transparent;text-align:right">' + currency(salarioNocturnoAjustado) + '</td></tr>')
+        + '<tr><td style="padding:8px;border-top:6px solid transparent">Salario mensual final (con horas extras ' + tipo + ')</td><td style="padding:8px;border-top:6px solid transparent;text-align:right">' + currency(salarioFinal) + '</td></tr>'
         + '</table>';
       resultBox.style.display = '';
     });
